@@ -32,19 +32,22 @@ def complex_exponential_sum(t, y, f0, Nf, df, method='auto'):
     assert method in ['direct', 'nfft', 'ndft', 'slow', 'auto']
     freq = f0 + df * np.arange(Nf)
 
-    t, y = np.broadcast_arrays(t, y)
+    t = np.asarray(t)
     assert t.ndim == 1
 
     Nf = int(Nf)
     assert Nf > 0
     assert Nf % 2 == 0
 
+    y = np.asarray(y)
+    y = np.broadcast_to(y, np.broadcast(y, t).shape)
+
     T = t.max() - t.min()
     F_O = 1. / (df * T)
     assert F_O > 1
 
     if method == 'direct':
-        return np.dot(np.exp(2j * np.pi * freq[:, np.newaxis] * t), y)
+        return np.dot(y, np.exp(2j * np.pi * freq * t[:, np.newaxis]))
     else:
         # shift the times to the range (-0.5, 0.5)
         Tstar = F_O * T
@@ -80,12 +83,16 @@ def simple_complex_exponential_sum(t, y, Nf, method='auto'):
     S : ndarray, shape y.shape[:-1] + (2 * Nf,)
         resulting sums at each frequency
     """
+    assert method in ['nfft', 'ndft', 'slow', 'auto']
+
     t = np.asarray(t)
     assert t.ndim == 1
     assert t.min() > -0.5 and t.max() < 0.5
-    assert method in ['nfft', 'ndft', 'slow', 'auto']
 
-    _, y = np.broadcast_arrays(t, y)
+    Nf = int(Nf)
+
+    y = np.asarray(y)
+    y = np.broadcast_to(y, np.broadcast(y, t).shape)
     outshape = y.shape[:-1] + (2 * Nf,)
     y = y.reshape(-1, len(t))
 
