@@ -26,7 +26,7 @@ def complex_exponential_sum(t, y, f0, Nf, df, method='auto'):
 
     Returns
     -------
-    S : ndarray, length 2 * Nf
+    S : ndarray, length Nf
         resulting sums at each frequency
     """
     assert method in ['direct', 'nfft', 'ndft', 'slow', 'auto']
@@ -39,25 +39,24 @@ def complex_exponential_sum(t, y, f0, Nf, df, method='auto'):
     assert Nf > 0
     assert Nf % 2 == 0
 
+    T = t.max() - t.min()
+    F_O = 1. / (df * T)
+    assert F_O > 1
+
     if method == 'direct':
-        return np.dot(np.exp(2j * np.pi * freq[:, None] * t), y)
+        return np.dot(np.exp(2j * np.pi * freq[:, np.newaxis] * t), y)
     else:
-        T = t.max() - t.min()
-
-        F_O = 1. / (df * T)
-        assert F_O > 1
-
+        # shift the times to the range (-0.5, 0.5)
         Tstar = F_O * T
-
         t0 = t.min() - 0.5 * (Tstar - T)
-
-        # q contains the times shifted to the range (-0.5, 0.5)
         q = -0.5 + (t - t0) / Tstar
+
+        # wrap phase into the weights
         x = y * np.exp(2j * np.pi * (f0 * Tstar + 0.5 * Nf) * q)
+        Qn = simple_complex_exponential_sum(t=q, y=x, Nf=Nf//2, method=method)
 
-        Qn = simple_complex_exponential_sum(t=q, y=x, Nf=Nf // 2, method=method)
-
-        return Qn * np.exp(2j * np.pi * freq * (t0 + 0.5 * Tstar))
+        # multiply by the phase that corrects for the above shifts
+        return Qn * np.exp(2j * np.pi * (t0 + 0.5 * Tstar) * freq)
 
 
 def simple_complex_exponential_sum(t, y, Nf, method='auto'):
@@ -88,6 +87,7 @@ def simple_complex_exponential_sum(t, y, Nf, method='auto'):
 
     if method == 'auto':
         method = 'nfft'
+
     if method == 'slow':
         freq = np.arange(-Nf, Nf)[:, np.newaxis]
         return np.dot(np.exp(2j * np.pi * freq * t), y)
@@ -97,7 +97,7 @@ def simple_complex_exponential_sum(t, y, Nf, method='auto'):
         plan.x = t
         plan.precompute()
         plan.f = y
-        # Need a copy here because the ndarray doesn't do proper reference
-        # counting, and points to dereferenced data once plan goes out
-        # of scope (as of pynfft version 1.3.2)
+        # Need a copy here because the NFFT doesn't do proper reference
+        # counting, and this points to dereferenced data once plan
+        # object goes out of scope (as of pynfft version 1.3.2)
         return plan.adjoint(use_dft=use_dft).copy()
