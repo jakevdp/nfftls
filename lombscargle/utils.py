@@ -68,7 +68,7 @@ def simple_complex_exponential_sum(t, y, Nf, method='auto'):
     ----------
     t : array_like, length N
         Sorted array of times in the interval [-0.5, 0.5]
-    y : array_like, length N
+    y : array_like, broadcastable with t
         array of weights
     Nf : integer
         number of frequencies
@@ -77,27 +77,31 @@ def simple_complex_exponential_sum(t, y, Nf, method='auto'):
 
     Returns
     -------
-    S : ndarray, length 2 * Nf
+    S : ndarray, shape y.shape[:-1] + (2 * Nf,)
         resulting sums at each frequency
     """
-    t, y = np.broadcast_arrays(t, y)
+    t = np.asarray(t)
     assert t.ndim == 1
     assert t.min() > -0.5 and t.max() < 0.5
     assert method in ['nfft', 'ndft', 'slow', 'auto']
+
+    _, y = np.broadcast_arrays(t, y)
+    outshape = y.shape[:-1] + (2 * Nf,)
+    y = y.reshape(-1, len(t))
 
     if method == 'auto':
         method = 'nfft'
 
     if method == 'slow':
-        freq = np.arange(-Nf, Nf)[:, np.newaxis]
-        return np.dot(np.exp(2j * np.pi * freq * t), y)
+        freq = np.arange(-Nf, Nf)
+        results = np.dot(y, np.exp(2j * np.pi * freq * t[:, np.newaxis]))
     else:
         use_dft = (method == 'ndft')
         plan = NFFT(2 * Nf, len(t))
         plan.x = t
         plan.precompute()
-        plan.f = y
-        # Need a copy here because the NFFT doesn't do proper reference
-        # counting, and this points to dereferenced data once plan
-        # object goes out of scope (as of pynfft version 1.3.2)
-        return plan.adjoint(use_dft=use_dft).copy()
+        results = np.zeros((y.shape[0], 2 * Nf), dtype=complex)
+        for i in range(y.shape[0]):
+            plan.f = y[i]
+            results[i] = plan.adjoint(use_dft=use_dft).copy()
+    return results.reshape(outshape)

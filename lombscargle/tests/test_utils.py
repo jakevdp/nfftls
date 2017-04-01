@@ -13,12 +13,20 @@ def data(rseed=42, N=100):
     return t, y
 
 
+@pytest.mark.parametrize('yshape', [(), (1,), (2,), (1, 2)])
 @pytest.mark.parametrize('method', ['auto', 'slow', 'ndft', 'nfft'])
 @pytest.mark.parametrize('Nf', [20, 50, 100])
-def test_simple_complex_exponential_sum(data, method, Nf):
-    t, y = data
-    assert_allclose(simple_complex_exponential_sum(t, y, Nf, method='slow'),
-                    simple_complex_exponential_sum(t, y, Nf, method=method))
+@pytest.mark.parametrize('Nt', [50, 100])
+def test_simple_complex_exponential_sum(yshape, method, Nf, Nt, rseed=42):
+    rand = np.random.RandomState(rseed)
+    t = -0.5 + np.sort(rand.rand(Nt))
+    y = rand.randn(*(yshape + (Nt,)))
+
+    result = simple_complex_exponential_sum(t, y, Nf, method=method)
+    baseline = simple_complex_exponential_sum(t, y, Nf, method='slow')
+
+    assert result.shape == y.shape[:-1] + (2 * Nf,)
+    assert_allclose(result, baseline)
 
 
 @pytest.mark.parametrize('method', ['auto', 'direct', 'slow', 'ndft', 'nfft'])
