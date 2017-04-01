@@ -1,8 +1,66 @@
+from __future__ import division
+
 import numpy as np
 from pynfft.nfft import NFFT
 
 
-def trig_sum(t, y, Nf, method='auto'):
+def complex_exponential_sum(t, y, f0, Nf, df, method='auto'):
+    """Compute a trigonometric sum over frequencies f = f0 + df * range(Nf)
+
+    The computed sum is S_m = sum_n [y_n * exp(2 * i * f_m * t_n)]
+
+    Parameters
+    ----------
+    t : array_like, length N
+        Sorted array of times
+    y : array_like, length N
+        array of weights
+    f0 : float
+        minimum frequency
+    Nf : integer
+        number of frequencies. Must be an even number
+    df : float
+        frequency step. Must be smaller than 1 / (t.max() - t.min()).
+    method : string, default='auto'
+        method to use. Must be one of ['auto', 'direct', 'slow', 'nfft', 'ndft']
+
+    Returns
+    -------
+    S : ndarray, length 2 * Nf
+        resulting sums at each frequency
+    """
+    assert method in ['direct', 'nfft', 'ndft', 'slow', 'auto']
+    freq = f0 + df * np.arange(Nf)
+
+    t, y = np.broadcast_arrays(t, y)
+    assert t.ndim == 1
+
+    Nf = int(Nf)
+    assert Nf > 0
+    assert Nf % 2 == 0
+
+    if method == 'direct':
+        return np.dot(np.exp(2j * np.pi * freq[:, None] * t), y)
+    else:
+        T = t.max() - t.min()
+
+        F_O = 1. / (df * T)
+        assert F_O > 1
+
+        Tstar = F_O * T
+
+        t0 = t.min() - 0.5 * (Tstar - T)
+
+        # q contains the times shifted to the range (-0.5, 0.5)
+        q = -0.5 + (t - t0) / Tstar
+        x = y * np.exp(2j * np.pi * (f0 * Tstar + 0.5 * Nf) * q)
+
+        Qn = simple_complex_exponential_sum(t=q, y=x, Nf=Nf // 2, method=method)
+
+        return Qn * np.exp(2j * np.pi * freq * (t0 + 0.5 * Tstar))
+
+
+def simple_complex_exponential_sum(t, y, Nf, method='auto'):
     """Compute a trigonometric sum over frequencies f = range(-Nf, Nf)
 
     The computed sum is S_m = sum_n [y_n * exp(2 * i * f_m * t_n)]
@@ -39,4 +97,7 @@ def trig_sum(t, y, Nf, method='auto'):
         plan.x = t
         plan.precompute()
         plan.f = y
+        # Need a copy here because the ndarray doesn't do proper reference
+        # counting, and points to dereferenced data once plan goes out
+        # of scope (as of pynfft version 1.3.2)
         return plan.adjoint(use_dft=use_dft).copy()
