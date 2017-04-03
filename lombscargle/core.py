@@ -131,10 +131,10 @@ class LombScargle(astropy_LombScargle):
             The frequency and Lomb-Scargle power
         """
         if method == 'nfft':
-            frequency = self.autofrequencyy(samples_per_peak=samples_per_peak,
-                                            nyquist_factor=nyquist_factor,
-                                            minimum_frequency=minimum_frequency,
-                                            maximum_frequency=maximum_frequency)
+            frequency = self.autofrequency(samples_per_peak=samples_per_peak,
+                                           nyquist_factor=nyquist_factor,
+                                           minimum_frequency=minimum_frequency,
+                                           maximum_frequency=maximum_frequency)
             power = self.power(frequency,
                                normalization=normalization,
                                method=method, method_kwds=method_kwds,

@@ -43,6 +43,12 @@ def lombscargle_nfft(t, y, dy, f0, df, Nf,
     if dy is None:
         dy = 1
 
+    if Nf % 2:
+        Nf = Nf + 1
+        sl = slice(None, -1)
+    else:
+        sl = slice(None)
+
     # Validate and setup input data
     t, y, dy = np.broadcast_arrays(t, y, dy)
     if t.ndim != 1:
@@ -118,4 +124,4 @@ def lombscargle_nfft(t, y, dy, f0, df, Nf,
         raise ValueError("normalization='{0}' "
                          "not recognized".format(normalization))
 
-    return power
+    return power[sl]
