@@ -1,4 +1,8 @@
 from astropy.stats import LombScargle as astropy_LombScargle
+from astropy.stats.lombscargle.core import strip_units
+from astropy.stats.lombscargle.implementations.main import _get_frequency_grid
+
+from .nfftls import lombscargle_nfft
 
 
 class LombScargle(astropy_LombScargle):
@@ -54,7 +58,23 @@ class LombScargle(astropy_LombScargle):
             The Lomb-Scargle power at the specified frequency
         """
         if method == 'nfft':
-            raise NotImplementedError()
+            if self.nterms != 1:
+                raise ValueError("nfft method only works for nterms=1")
+            f0, df, Nf = _get_frequency_grid(strip_units(frequency),
+                                             assume_regular_frequency)
+            if method_kwds and 'use_fft' in method_kwds:
+                use_fft = method_kwds.pop('use_fft')
+                if use_fft:
+                    method_kwds['exponential_sum_method'] = 'nfft'
+                else:
+                    method_kwds['exponential_sum_method'] = 'slow'
+            power = lombscargle_nfft(*strip_units(self.t, self.y, self.dy),
+                                     f0, df, Nf,
+                                     center_data=self.center_data,
+                                     fit_mean=self.fit_mean,
+                                     normalization=normalization,
+                                     **(method_kwds or {}))
+            return power * self._power_unit(normalization)
         else:
             return super(LombScargle, self).power(frequency=frequency,
                                                   normalization=normalization,
@@ -111,7 +131,15 @@ class LombScargle(astropy_LombScargle):
             The frequency and Lomb-Scargle power
         """
         if method == 'nfft':
-            raise NotImplementedError()
+            frequency = self.autofrequencyy(samples_per_peak=samples_per_peak,
+                                            nyquist_factor=nyquist_factor,
+                                            minimum_frequency=minimum_frequency,
+                                            maximum_frequency=maximum_frequency)
+            power = self.power(frequency,
+                               normalization=normalization,
+                               method=method, method_kwds=method_kwds,
+                               assume_regular_frequency=True)
+            return frequency, power
         else:
             return super(LombScargle, self).autopower(method=method,
                                                       method_kwds=method_kwds,

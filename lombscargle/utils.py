@@ -7,7 +7,7 @@ from pynfft.nfft import NFFT
 def complex_exponential_sum(t, y, f0, Nf, df, method='auto'):
     """Compute a trigonometric sum over frequencies f = f0 + df * range(Nf)
 
-    The computed sum is S_m = sum_n [y_n * exp(2 * i * f_m * t_n)]
+    The computed sum is S_m = sum_k [y_k * exp(2 * i * f_m * t_k)]
 
     Parameters
     ----------
@@ -65,7 +65,7 @@ def complex_exponential_sum(t, y, f0, Nf, df, method='auto'):
 def simple_complex_exponential_sum(t, y, Nf, method='auto'):
     """Compute a trigonometric sum over frequencies f = range(-Nf, Nf)
 
-    The computed sum is S_m = sum_n [y_n * exp(2 * i * f_m * t_n)]
+    The computed sum is S_m = sum_k [y_k * exp(2 * i * n * f_m * t_k)]
 
     Parameters
     ----------
@@ -111,4 +111,5 @@ def simple_complex_exponential_sum(t, y, Nf, method='auto'):
         for i in range(y.shape[0]):
             plan.f = y[i]
             results[i] = plan.adjoint(use_dft=use_dft).copy()
+
     return results.reshape(outshape)

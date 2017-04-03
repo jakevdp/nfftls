@@ -14,8 +14,8 @@ def test_simple_complex_exponential_sum(yshape, method, Nf, Nt, rseed=42):
     t = -0.5 + np.sort(rand.rand(Nt))
     y = rand.randn(*(yshape + (Nt,)))
 
-    result = simple_complex_exponential_sum(t, y, Nf, method=method)
     baseline = simple_complex_exponential_sum(t, y, Nf, method='slow')
+    result = simple_complex_exponential_sum(t, y, Nf, method=method)
 
     assert result.shape == yshape + (2 * Nf,)
     assert_allclose(result, baseline)

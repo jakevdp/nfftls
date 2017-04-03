@@ -6,9 +6,9 @@ from astropy.tests.helper import pytest, assert_quantity_allclose
 from .. import LombScargle
 
 
-ALL_METHODS = LombScargle.available_methods
+ALL_METHODS = LombScargle.available_methods + ['nfft']
 ALL_METHODS_NO_AUTO = [method for method in ALL_METHODS if method != 'auto']
-FAST_METHODS = [method for method in ALL_METHODS if 'fast' in method]
+FAST_METHODS = [method for method in ALL_METHODS if 'fast' in method] + ['nfft']
 NTERMS_METHODS = [method for method in ALL_METHODS if 'chi2' in method]
 NORMALIZATIONS = ['standard', 'psd', 'log', 'model']
 
@@ -163,7 +163,7 @@ def test_nterms_methods(method, center_data, fit_mean, with_errors,
         P_expected = ls.power(frequency, **kwds)
 
         # don't use fast fft approximations here
-        if 'fast' in method:
+        if 'fast' in method or method == 'nfft':
             kwds['method_kwds'] = dict(use_fft=False)
         P_method = ls.power(frequency, method=method, **kwds)
 
@@ -188,7 +188,7 @@ def test_fast_approximations(method, center_data, fit_mean,
     # use only standard normalization because we compare via absolute tolerance
     kwds = dict(method=method, normalization='standard')
 
-    if method == 'fast' and nterms != 1:
+    if (method == 'fast' or method == 'nfft') and nterms != 1:
         with pytest.raises(ValueError) as err:
             ls.power(frequency, **kwds)
         assert 'nterms' in str(err.value)
